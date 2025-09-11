@@ -8,6 +8,7 @@ import {
   Home,
   Flame,
   Search,
+  Heart,
   Sparkles,
   Bug,
   Twitter,
@@ -24,6 +25,7 @@ const navLinks = [
       { name: "Home", link: "/home", icon: Home },
       { name: "Trending", link: "/home/trending", icon: Flame },
       { name: "Discover", link: "/home/discover", icon: Search },
+      { name: "Favorites", link: "/home/favorites", icon: Heart },
     ],
   },
   {

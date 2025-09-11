@@ -1,13 +1,21 @@
-'use client';
+"use client";
 
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { useDebouncedCallback } from 'use-debounce';
+import { useDebouncedCallback } from "use-debounce";
 import Select from "@/components/Select";
+import {
+  ChevronUp,
+  ChevronDown,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
+import FavoriteButton from "@/components/ui/FavoriteButton";
 
 interface Repo {
   name: string;
+  description?: string;
   language: string;
   topics?: string[];
   stargazers_count: number;
@@ -21,11 +29,20 @@ interface Repo {
 
 type ColumnKey = keyof Pick<
   Repo,
-  "name" | "language" | "topics" | "stargazers_count" | "forks_count" | "popularity"
+  | "name"
+  | "description"
+  | "language"
+  | "topics"
+  | "stargazers_count"
+  | "forks_count"
+  | "popularity"
 >;
+
+type SortDirection = "asc" | "desc" | null;
 
 const columns: { key: ColumnKey; label: string }[] = [
   { key: "name", label: "Repository" },
+  { key: "description", label: "Description" },
   { key: "language", label: "Language" },
   { key: "topics", label: "Tags" },
   { key: "stargazers_count", label: "Stars" },
@@ -33,34 +50,85 @@ const columns: { key: ColumnKey; label: string }[] = [
   { key: "popularity", label: "Popularity" },
 ];
 
+const extractRepoName = (htmlUrl: string): string => {
+  // Extract just the repo name from https://github.com/owner/repo
+  const match = htmlUrl.match(/github\.com\/[^\/]+\/([^\/]+)/);
+  return match ? match[1] : "";
+};
+
 const LANGUAGE_COLORS = {
-  TypeScript: 'bg-blue-500/10 text-blue-400 border-blue-400/20',
-  JavaScript: 'bg-yellow-500/10 text-yellow-400 border-yellow-400/20',
-  Python: 'bg-emerald-500/10 text-emerald-400 border-emerald-400/20',
-  Go: 'bg-cyan-500/10 text-cyan-400 border-cyan-400/20',
-  Rust: 'bg-orange-500/10 text-orange-400 border-orange-400/20',
-  Java: 'bg-red-500/10 text-red-400 border-red-400/20',
-  'C++': 'bg-purple-500/10 text-purple-400 border-purple-400/20',
-  'C#': 'bg-indigo-500/10 text-indigo-400 border-indigo-400/20',
-  PHP: 'bg-violet-500/10 text-violet-400 border-violet-400/20',
-  Ruby: 'bg-pink-500/10 text-pink-400 border-pink-400/20',
-  Swift: 'bg-rose-500/10 text-rose-400 border-rose-400/20',
-  Kotlin: 'bg-purple-600/10 text-purple-300 border-purple-300/20',
-  Dart: 'bg-teal-500/10 text-teal-400 border-teal-400/20',
-  Shell: 'bg-gray-500/10 text-gray-400 border-gray-400/20',
-  Scala: 'bg-red-600/10 text-red-300 border-red-300/20',
-  HTML: 'bg-orange-600/10 text-orange-300 border-orange-300/20',
-  CSS: 'bg-blue-600/10 text-blue-300 border-blue-300/20',
-  C: 'bg-gray-600/10 text-gray-300 border-gray-300/20',
-  'Objective-C': 'bg-sky-600/10 text-sky-300 border-sky-300/20',
-  R: 'bg-blue-700/10 text-blue-300 border-blue-300/20',
-  default: 'bg-neutral-500/10 text-neutral-400 border-neutral-400/20',
+  TypeScript: "bg-blue-500/10 text-blue-400 border-blue-400/20",
+  JavaScript: "bg-yellow-500/10 text-yellow-400 border-yellow-400/20",
+  Python: "bg-emerald-500/10 text-emerald-400 border-emerald-400/20",
+  Go: "bg-cyan-500/10 text-cyan-400 border-cyan-400/20",
+  Rust: "bg-orange-500/10 text-orange-400 border-orange-400/20",
+  Java: "bg-red-500/10 text-red-400 border-red-400/20",
+  "C++": "bg-purple-500/10 text-purple-400 border-purple-400/20",
+  "C#": "bg-indigo-500/10 text-indigo-400 border-indigo-400/20",
+  PHP: "bg-violet-500/10 text-violet-400 border-violet-400/20",
+  Ruby: "bg-pink-500/10 text-pink-400 border-pink-400/20",
+  Swift: "bg-rose-500/10 text-rose-400 border-rose-400/20",
+  Kotlin: "bg-purple-600/10 text-purple-300 border-purple-300/20",
+  Dart: "bg-teal-500/10 text-teal-400 border-teal-400/20",
+  Shell: "bg-gray-500/10 text-gray-400 border-gray-400/20",
+  Scala: "bg-red-600/10 text-red-300 border-red-300/20",
+  HTML: "bg-orange-600/10 text-orange-300 border-orange-300/20",
+  CSS: "bg-blue-600/10 text-blue-300 border-blue-300/20",
+  C: "bg-gray-600/10 text-gray-300 border-gray-300/20",
+  "Objective-C": "bg-sky-600/10 text-sky-300 border-sky-300/20",
+  R: "bg-blue-700/10 text-blue-300 border-blue-300/20",
+  default: "bg-neutral-500/10 text-neutral-400 border-neutral-400/20",
 };
 
 const formatNumber = (n: number) =>
-  n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` :
-    n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` :
-      n.toString();
+  n >= 1e6
+    ? `${(n / 1e6).toFixed(1)}M`
+    : n >= 1e3
+    ? `${(n / 1e3).toFixed(1)}k`
+    : n.toString();
+
+const truncateDescription = (desc: string | undefined, maxLength = 120) => {
+  if (!desc) return "No description available";
+  return desc.length > maxLength ? desc.substring(0, maxLength) + "..." : desc;
+};
+
+const sortData = (
+  data: Repo[],
+  column: ColumnKey,
+  direction: SortDirection
+): Repo[] => {
+  if (!direction) return data;
+
+  return [...data].sort((a, b) => {
+    let aValue = a[column];
+    let bValue = b[column];
+
+    // Handle different data types
+    if (column === "stargazers_count" || column === "forks_count") {
+      aValue = aValue || 0;
+      bValue = bValue || 0;
+    } else if (column === "topics") {
+      aValue = Array.isArray(aValue) ? aValue.length : 0;
+      bValue = Array.isArray(bValue) ? bValue.length : 0;
+    } else if (column === "popularity") {
+      const popularityOrder = {
+        legendary: 4,
+        famous: 3,
+        popular: 2,
+        rising: 1,
+      };
+      aValue = popularityOrder[aValue as keyof typeof popularityOrder] || 0;
+      bValue = popularityOrder[bValue as keyof typeof popularityOrder] || 0;
+    } else {
+      aValue = String(aValue || "").toLowerCase();
+      bValue = String(bValue || "").toLowerCase();
+    }
+
+    if (aValue < bValue) return direction === "asc" ? -1 : 1;
+    if (aValue > bValue) return direction === "asc" ? 1 : -1;
+    return 0;
+  });
+};
 
 const renderCell = (
   record: Repo,
@@ -73,33 +141,73 @@ const renderCell = (
   switch (key) {
     case "name":
       return repoLink ? (
-        <Link
-          href={repoLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group flex items-center gap-2 hover:text-yellow-300 transition"
-        >
-          {record.imgUrl && (
-            <Image
-              src={`${record.imgUrl}&s=24`}
-              alt={`avatar`}
-              width={24}
-              height={24}
-              className="rounded-full group-hover:opacity-80 transition"
-              unoptimized
+        <div className="flex items-center gap-3">
+          <Link
+            href={repoLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-2 hover:text-yellow-300 transition"
+          >
+            {record.imgUrl && (
+              <Image
+                src={`${record.imgUrl}&s=24`}
+                alt={`avatar`}
+                width={24}
+                height={24}
+                className="rounded-full group-hover:opacity-80 transition"
+                unoptimized
+              />
+            )}
+            <span className="font-medium">{value}</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/home/issues/${extractRepoName(
+                record.html_url || record.githubUrl || ""
+              )}`}
+              className="text-xs bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 px-2 py-1 rounded border border-purple-500/30 transition-colors"
+            >
+              Issues
+            </Link>
+            <FavoriteButton
+              repo={{
+                id: extractRepoName(record.html_url || record.githubUrl || ""),
+                name: record.name,
+                description: record.description,
+                language: record.language,
+                stargazers_count: record.stargazers_count,
+                forks_count: record.forks_count,
+                owner: record.imgUrl
+                  ? { login: "", avatar_url: record.imgUrl }
+                  : undefined,
+                html_url: record.html_url || record.githubUrl,
+              }}
+              size="sm"
             />
-          )}
-          <span className="font-medium">{value}</span>
-        </Link>
+          </div>
+        </div>
       ) : (
         <span className="text-neutral-400">-</span>
       );
 
+    case "description":
+      return (
+        <div className="max-w-md">
+          <span className="text-slate-400 text-sm leading-relaxed">
+            {truncateDescription(record.description)}
+          </span>
+        </div>
+      );
+
     case "language":
       if (!value) return <span className="text-neutral-400">-</span>;
-      const colorClass = LANGUAGE_COLORS[value as keyof typeof LANGUAGE_COLORS] || LANGUAGE_COLORS.default;
+      const colorClass =
+        LANGUAGE_COLORS[value as keyof typeof LANGUAGE_COLORS] ||
+        LANGUAGE_COLORS.default;
       return (
-        <span className={`capitalize whitespace-nowrap font-semibold text-xs w-fit px-2.5 py-1 rounded-md border transition-all duration-200 hover:scale-105 hover:shadow-sm ${colorClass}`}>
+        <span
+          className={`capitalize whitespace-nowrap font-semibold text-xs w-fit px-2.5 py-1 rounded-md border transition-all duration-200 hover:scale-105 hover:shadow-sm ${colorClass}`}
+        >
           {value}
         </span>
       );
@@ -107,14 +215,15 @@ const renderCell = (
     case "popularity":
       return (
         <span
-          className={`capitalize font-semibold w-fit text-xs px-2 py-1 rounded-md ${value === "legendary"
-            ? "bg-yellow-500/10 text-yellow-400 border border-yellow-400/20"
-            : value === "famous"
+          className={`capitalize font-semibold w-fit text-xs px-2 py-1 rounded-md ${
+            value === "legendary"
+              ? "bg-yellow-500/10 text-yellow-400 border border-yellow-400/20"
+              : value === "famous"
               ? "bg-purple-500/10 text-purple-400 border border-purple-400/20"
               : value === "popular"
-                ? "bg-sky-500/10 text-sky-400 border border-sky-400/20"
-                : "bg-green-500/10 text-green-400 border border-green-400/20"
-            }`}
+              ? "bg-sky-500/10 text-sky-400 border border-sky-400/20"
+              : "bg-green-500/10 text-green-400 border border-green-400/20"
+          }`}
         >
           {value ?? "-"}
         </span>
@@ -154,11 +263,29 @@ const renderCell = (
 export default function Page() {
   const [isLoading, setIsLoading] = useState(false);
   const [fetchedData, setFetchedData] = useState<Repo[]>([]);
-  const [query, setQuery] = useState<string>('');
+  const [query, setQuery] = useState<string>("");
   const [filteredData, setFilteredData] = useState<Repo[]>([]);
-  const [language, setLanguage] = useState('');
-  const [popularity, setPopularity] = useState('');
+  const [language, setLanguage] = useState("");
+  const [popularity, setPopularity] = useState("");
+  const [sortColumn, setSortColumn] = useState<ColumnKey | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20); // Show 20 items per page
 
+  const handleSort = (column: ColumnKey) => {
+    if (sortColumn === column) {
+      // Cycle through: asc -> desc -> null
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortDirection(null);
+        setSortColumn(null);
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
 
   useEffect(() => {
     const fetchTrendingGithubData = async () => {
@@ -175,13 +302,14 @@ export default function Page() {
             stars >= 50000
               ? "legendary"
               : stars >= 10000
-                ? "famous"
-                : stars >= 1000
-                  ? "popular"
-                  : "rising";
+              ? "famous"
+              : stars >= 1000
+              ? "popular"
+              : "rising";
 
           return {
             name: repo.name,
+            description: repo.description,
             language: repo.language,
             topics: repo.topics,
             stargazers_count: stars,
@@ -206,24 +334,45 @@ export default function Page() {
 
   const debouncedFilter = useDebouncedCallback((q: string) => {
     const filtered = fetchedData.filter((r) => {
-      const matchesQuery = (
+      const matchesQuery =
         r.name.toLowerCase().includes(q) ||
+        r.description?.toLowerCase().includes(q) ||
         r.language?.toLowerCase().includes(q) ||
         r.popularity?.toLowerCase().includes(q) ||
         r.topics?.some((t) => t.toLowerCase().includes(q)) ||
         formatNumber(r.stargazers_count).toLowerCase().includes(q) ||
-        formatNumber(r.forks_count).toLowerCase().includes(q)
-      );
+        formatNumber(r.forks_count).toLowerCase().includes(q);
 
-      const matchesLang = language === '' || r.language?.toLowerCase() === language;
-      const matchesPop = popularity === '' || r.popularity === popularity;
+      const matchesLang =
+        language === "" || r.language?.toLowerCase() === language;
+      const matchesPop = popularity === "" || r.popularity === popularity;
 
       return matchesQuery && matchesLang && matchesPop;
     });
 
-    setFilteredData(filtered);
+    // Apply sorting to filtered results
+    const sortedRepos = sortData(filtered, sortColumn, sortDirection);
+    setFilteredData(sortedRepos);
   }, 500);
 
+  useEffect(() => {
+    // Re-sort when sort parameters change
+    const sortedRepos = sortData(filteredData, sortColumn, sortDirection);
+    setFilteredData(sortedRepos);
+    setCurrentPage(1); // Reset to first page when sorting changes
+  }, [sortColumn, sortDirection]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentData = filteredData.slice(startIndex, endIndex);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
 
   return (
     <main className="relative w-full min-h-screen p-8 z-10">
@@ -238,7 +387,7 @@ export default function Page() {
             </div>
             <div className="relative w-full max-w-[17rem]">
               <svg
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 font-medium text-neutral-500 pointer-events-none"
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 font-medium text-slate-500 pointer-events-none"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth={1.5}
@@ -261,7 +410,7 @@ export default function Page() {
                 }}
                 placeholder="Trending GitHub projects this month"
                 aria-label="Search repositories"
-                className="pl-8 pr-2 py-1 w-full text-sm text-neutral-500 tracking-tight border-[2px] bg-transparent focus:outline-none focus:ring-1 focus:ring-yellow-300 transition"
+                className="pl-8 pr-2 py-1 w-full text-sm text-slate-500 tracking-tight border-[2px] bg-transparent focus:outline-none focus:ring-1 focus:ring-purple-300 transition"
                 style={{
                   borderImage:
                     "conic-gradient(#d4d4d4 0deg, #171717 90deg, #d4d4d4 180deg, #171717 270deg, #d4d4d4 360deg) 1",
@@ -278,8 +427,8 @@ export default function Page() {
                 debouncedFilter(query.toLowerCase().trim());
               }}
               options={Array.from(
-                new Set(fetchedData.map(r => r.language).filter(Boolean))
-              ).map(lang => ({ value: lang!.toLowerCase(), label: lang! }))}
+                new Set(fetchedData.map((r) => r.language).filter(Boolean))
+              ).map((lang) => ({ value: lang!.toLowerCase(), label: lang! }))}
               placeholder="All Languages"
             />
 
@@ -290,10 +439,10 @@ export default function Page() {
                 debouncedFilter(query.toLowerCase().trim());
               }}
               options={[
-                { value: 'legendary', label: 'Legendary' },
-                { value: 'famous', label: 'Famous' },
-                { value: 'popular', label: 'Popular' },
-                { value: 'rising', label: 'Rising' },
+                { value: "legendary", label: "Legendary" },
+                { value: "famous", label: "Famous" },
+                { value: "popular", label: "Popular" },
+                { value: "rising", label: "Rising" },
               ]}
               placeholder="All Popularity"
             />
@@ -307,7 +456,7 @@ export default function Page() {
           aria-busy="true"
         >
           <div className="w-10 h-10 border-4 border-transparent border-t-yellow-300 rounded-full animate-spin" />
-          <h1 className="text-base sm:text-lg font-medium text-neutral-300 tracking-tight">
+          <h1 className="text-base sm:text-lg font-medium text-slate-300 tracking-tight">
             Banging Hard
           </h1>
         </section>
@@ -315,25 +464,53 @@ export default function Page() {
         <>
           {/* Desktop Table */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="min-w-full table-auto border-collapse bg-black/40 backdrop-blur-sm border border-neutral-800/50 overflow-hidden">
+            <table className="min-w-full table-auto border-collapse bg-slate-900/40 backdrop-blur-sm border border-purple-800/50 overflow-hidden">
               <thead>
-                <tr className="border-b border-neutral-800/50">
+                <tr className="border-b border-purple-800/50">
                   {columns.map(({ key, label }) => (
                     <th
                       key={key}
-                      className={`${key === "topics" ? "text-center" : "text-left"
-                        } py-4 px-6 text-sm font-medium text-neutral-400 bg-neutral-900/30`}
+                      className={`${
+                        key === "topics" ? "text-center" : "text-left"
+                      } py-4 px-6 text-sm font-medium text-slate-400 bg-purple-900/30 cursor-pointer hover:bg-purple-800/40 transition-colors select-none`}
+                      onClick={() => handleSort(key)}
                     >
-                      {label}
+                      <div className="flex items-center gap-2">
+                        <span>{label}</span>
+                        {sortColumn === key && (
+                          <div className="flex flex-col">
+                            <ChevronUp
+                              className={`w-3 h-3 ${
+                                sortDirection === "asc"
+                                  ? "text-purple-300"
+                                  : "text-slate-500"
+                              }`}
+                            />
+                            <ChevronDown
+                              className={`w-3 h-3 -mt-1 ${
+                                sortDirection === "desc"
+                                  ? "text-purple-300"
+                                  : "text-slate-500"
+                              }`}
+                            />
+                          </div>
+                        )}
+                        {sortColumn !== key && (
+                          <div className="flex flex-col">
+                            <ChevronUp className="w-3 h-3 text-slate-600" />
+                            <ChevronDown className="w-3 h-3 -mt-1 text-slate-600" />
+                          </div>
+                        )}
+                      </div>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filteredData.map((record, idx) => (
+                {currentData.map((record, idx) => (
                   <tr
                     key={idx}
-                    className="border-b border-neutral-800/30 group hover:bg-neutral-900/20 transition"
+                    className="border-b border-purple-800/30 group hover:bg-purple-900/20 transition"
                   >
                     {columns.map(({ key }) => (
                       <td key={key} className="py-4 px-6 text-sm">
@@ -348,25 +525,29 @@ export default function Page() {
 
           {/* Mobile Cards */}
           <div className="md:hidden space-y-4">
-            {filteredData.map((record, idx) => (
+            {currentData.map((record, idx) => (
               <div
                 key={idx}
-                className="border border-neutral-800/50 p-4 bg-black/40 backdrop-blur-sm space-y-5 hover:border-neutral-700 transition"
+                className="border border-purple-800/50 p-4 bg-slate-900/40 backdrop-blur-sm space-y-5 hover:border-purple-700 transition"
               >
                 <div className="flex flex-col gap-2 text-sm text-white font-medium">
                   {renderCell(record, "name", idx, record.githubUrl)}
+                  {renderCell(record, "description", idx)}
                   {renderCell(record, "language", idx)}
                   {renderCell(record, "topics", idx)}
                   {renderCell(record, "popularity", idx)}
-
                 </div>
-                <div className="border-t border-neutral-800/50" />
+                <div className="border-t border-purple-800/50" />
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   {columns
-                    .filter(({ key }) => ["stargazers_count", "forks_count"].includes(key))
+                    .filter(({ key }) =>
+                      ["stargazers_count", "forks_count"].includes(key)
+                    )
                     .map(({ key, label }) => (
                       <div key={key} className="flex flex-col gap-0.5">
-                        <span className="text-neutral-400 font-medium">{label}</span>
+                        <span className="text-slate-400 font-medium">
+                          {label}
+                        </span>
                         <div className="text-white font-semibold">
                           {renderCell(record, key, idx)}
                         </div>
@@ -376,11 +557,62 @@ export default function Page() {
               </div>
             ))}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 mt-8">
+              <button
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+                First
+              </button>
+
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronDown className="w-4 h-4 rotate-90" />
+                Previous
+              </button>
+
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 text-sm">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <span className="text-slate-500 text-xs">
+                  ({filteredData.length} total repos)
+                </span>
+              </div>
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+                <ChevronDown className="w-4 h-4 -rotate-90" />
+              </button>
+
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Last
+                <ChevronsRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </>
       ) : (
-        <div className="text-center text-neutral-300 mt-20">No repositories found...</div>
-      )
-      }
-    </main >
+        <div className="text-center text-slate-300 mt-20">
+          No repositories found...
+        </div>
+      )}
+    </main>
   );
 }

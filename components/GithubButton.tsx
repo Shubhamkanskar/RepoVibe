@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Star } from "lucide-react";
 import { useState, useEffect } from "react";
 
-const CACHE_KEY = 'ossean_star_count';
+const CACHE_KEY = "";
 const CACHE_DURATION = 10 * 60 * 1000;
 
 export default function GithubButton() {
@@ -13,15 +13,17 @@ export default function GithubButton() {
   useEffect(() => {
     const fetchStarCount = async () => {
       try {
-        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}");
         const now = Date.now();
 
-        if (cached.timestamp && (now - cached.timestamp < CACHE_DURATION)) {
+        if (cached.timestamp && now - cached.timestamp < CACHE_DURATION) {
           setStarCount(cached.count);
           return;
         }
 
-        const response = await fetch('https://api.github.com/repos/faizshaikh17/ossean');
+        const response = await fetch(
+          "https://github.com/Shubhamkanskar/RepoVibe"
+        );
         if (response.ok) {
           const data = await response.json();
           const stars = data.stargazers_count;
@@ -34,13 +36,16 @@ export default function GithubButton() {
           }
 
           setStarCount(formattedCount);
-          localStorage.setItem(CACHE_KEY, JSON.stringify({
-            count: formattedCount,
-            timestamp: now
-          }));
+          localStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({
+              count: formattedCount,
+              timestamp: now,
+            })
+          );
         }
       } catch (error) {
-        console.error('Error fetching star count:', error);
+        console.error("Error fetching star count:", error);
       }
     };
 
@@ -49,7 +54,7 @@ export default function GithubButton() {
 
   return (
     <Link
-      href="https://github.com/faizshaikh17/ossean"
+      href="https://github.com/faizshaikh17/repovibe"
       target="_blank"
       rel="noopener noreferrer"
       className="group relative flex items-center justify-between gap-2 w-fit max-w-full sm:max-w-[16rem] whitespace-nowrap border border-white/10 px-3 py-2 text-xs sm:text-sm text-white/90 font-mono transition-all duration-700 ease-out hover:shadow-[0_0_20px_rgba(255,255,255,0.08)] overflow-hidden"

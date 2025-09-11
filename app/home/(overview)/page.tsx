@@ -5,9 +5,17 @@ import YC from "@/lib/YC.json";
 import { useState, useEffect } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import Select from "@/components/Select";
+import {
+  ChevronUp,
+  ChevronDown,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
+import FavoriteButton from "@/components/ui/FavoriteButton";
 
 interface Repo {
   name?: string;
+  description?: string;
   language?: string;
   topics?: string[];
   stargazers_count?: number;
@@ -20,6 +28,7 @@ interface Repo {
 type ColumnKey = keyof Pick<
   Repo,
   | "name"
+  | "description"
   | "language"
   | "topics"
   | "stargazers_count"
@@ -27,8 +36,11 @@ type ColumnKey = keyof Pick<
   | "popularity"
 >;
 
+type SortDirection = "asc" | "desc" | null;
+
 const columns: { key: ColumnKey; label: string }[] = [
   { key: "name", label: "Repository" },
+  { key: "description", label: "Description" },
   { key: "language", label: "Language" },
   { key: "topics", label: "Tags" },
   { key: "stargazers_count", label: "Stars" },
@@ -67,34 +79,115 @@ const formatNumber = (n: number) =>
     ? `${+(n / 1e3).toFixed(1)}k`
     : n.toString();
 
+const truncateDescription = (desc: string | undefined, maxLength = 120) => {
+  if (!desc) return "No description available";
+  return desc.length > maxLength ? desc.substring(0, maxLength) + "..." : desc;
+};
+
+const sortData = (
+  data: Repo[],
+  column: ColumnKey,
+  direction: SortDirection
+): Repo[] => {
+  if (!direction) return data;
+
+  return [...data].sort((a, b) => {
+    let aValue = a[column];
+    let bValue = b[column];
+
+    // Handle different data types
+    if (column === "stargazers_count" || column === "forks_count") {
+      aValue = aValue || 0;
+      bValue = bValue || 0;
+    } else if (column === "topics") {
+      aValue = Array.isArray(aValue) ? aValue.length : 0;
+      bValue = Array.isArray(bValue) ? bValue.length : 0;
+    } else if (column === "popularity") {
+      const popularityOrder = {
+        legendary: 4,
+        famous: 3,
+        popular: 2,
+        rising: 1,
+      };
+      aValue = popularityOrder[aValue as keyof typeof popularityOrder] || 0;
+      bValue = popularityOrder[bValue as keyof typeof popularityOrder] || 0;
+    } else {
+      aValue = String(aValue || "").toLowerCase();
+      bValue = String(bValue || "").toLowerCase();
+    }
+
+    if (aValue < bValue) return direction === "asc" ? -1 : 1;
+    if (aValue > bValue) return direction === "asc" ? 1 : -1;
+    return 0;
+  });
+};
+
 const renderCell = (record: Repo, key: ColumnKey) => {
   const value = record[key];
 
   switch (key) {
     case "name":
       return record.repoLink ? (
-        <Link
-          href={`https://github.com/${record.repoLink}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group flex items-center gap-2 hover:text-yellow-300 transition"
-        >
-          {record.imgUrl && (
-            <Image
-              src={`${record.imgUrl}&s=24`}
-              alt={`avatar`}
-              width={24}
-              height={24}
-              className="rounded-full group-hover:opacity-80 transition"
-              unoptimized
+        <div className="flex items-center gap-3">
+          <Link
+            href={`https://github.com/${record.repoLink}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-2 hover:text-yellow-300 transition"
+          >
+            {record.imgUrl && (
+              <Image
+                src={`${record.imgUrl}&s=24`}
+                alt={`avatar`}
+                width={24}
+                height={24}
+                className="rounded-full group-hover:opacity-80 transition"
+                unoptimized
+              />
+            )}
+            <span className="font-medium">
+              {value || record.repoLink?.split("/")[1] || "Unknown"}
+            </span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/home/issues/${
+                record.repoLink?.split("/")[1] || record.name
+              }`}
+              className="text-xs bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 px-2 py-1 rounded border border-purple-500/30 transition-colors"
+            >
+              Issues
+            </Link>
+            <FavoriteButton
+              repo={{
+                id: record.repoLink || "",
+                name: record.name || "",
+                description: record.description,
+                language: record.language,
+                stargazers_count: record.stargazers_count,
+                forks_count: record.forks_count,
+                owner: record.imgUrl
+                  ? { login: "", avatar_url: record.imgUrl }
+                  : undefined,
+                html_url: record.repoLink
+                  ? `https://github.com/${record.repoLink}`
+                  : undefined,
+              }}
+              size="sm"
             />
-          )}
-          <span className="font-medium">
-            {value || record.repoLink.split("/")[1]}
-          </span>
-        </Link>
+          </div>
+        </div>
       ) : (
         <span className="text-neutral-400 text-sm">-</span>
+      );
+
+    case "description":
+      return (
+        <div className="max-w-md">
+          <span className="text-slate-400 text-sm leading-relaxed">
+            {truncateDescription(record.description)}
+          </span>
+        </div>
       );
 
     case "language":
@@ -166,9 +259,31 @@ export default function Page() {
   const [results, setResults] = useState<Repo[]>([]);
   const [filtered, setFiltered] = useState<Repo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [allRepoNames, setAllRepoNames] = useState<string[]>([]);
+  const [loadedRepos, setLoadedRepos] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [language, setLanguage] = useState("");
   const [popularity, setPopularity] = useState("");
+  const [sortColumn, setSortColumn] = useState<ColumnKey | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(15); // Show 15 items per page for YC repos
+
+  const handleSort = (column: ColumnKey) => {
+    if (sortColumn === column) {
+      // Cycle through: asc -> desc -> null
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortDirection(null);
+        setSortColumn(null);
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
 
   useEffect(() => {
     const fetchGitHubData = async () => {
@@ -181,21 +296,99 @@ export default function Page() {
       }
 
       try {
-        const fetched = await Promise.all(
-          repoNames.map(async (repo) => {
+        // Only load the most popular/well-known YC repos initially (first 15)
+        // This includes repos like Supabase, Ollama, etc. that are most likely to be popular
+        const initialRepos = repoNames.slice(0, 15);
+
+        // Load only these initial repos
+        const initialResults = await Promise.all(
+          initialRepos.map(async (repo) => {
+            try {
+              const res = await fetch(`/api/githubOverview?repo=${repo}`);
+              if (!res.ok) return null;
+              const raw = await res.json();
+              const stars = raw.stargazers_count || 0;
+
+              return {
+                name: raw.name || repo.split("/")[1],
+                description: raw.description,
+                language: raw.language,
+                topics: raw.topics,
+                stargazers_count: stars,
+                forks_count: raw.forks_count,
+                imgUrl: raw.owner?.avatar_url,
+                repoLink: repo,
+                popularity:
+                  stars >= 50000
+                    ? "legendary"
+                    : stars >= 10000
+                    ? "famous"
+                    : stars >= 1000
+                    ? "popular"
+                    : "rising",
+              } as Repo;
+            } catch (error) {
+              console.error(`Error fetching ${repo}:`, error);
+              return null;
+            }
+          })
+        );
+
+        const cleanInitial = initialResults.filter(Boolean) as Repo[];
+        setResults(cleanInitial);
+        setFiltered(cleanInitial);
+        setIsLoading(false); // Show initial results immediately
+
+        // Store all repo names and track loaded repos
+        setAllRepoNames(repoNames);
+        const initialLoadedSet = new Set(initialRepos);
+        setLoadedRepos(initialLoadedSet);
+
+        const remainingRepos = repoNames.slice(15);
+        if (remainingRepos.length > 0) {
+          console.log(
+            `${remainingRepos.length} more repos available for lazy loading`
+          );
+        }
+      } catch (err) {
+        console.error("Fetch error", err);
+        setIsLoading(false);
+      }
+    };
+
+    fetchGitHubData();
+  }, []);
+
+  // Function to load more repos when needed
+  const loadMoreRepos = async (searchQuery: string = "") => {
+    if (isLoadingMore || allRepoNames.length === 0) return;
+
+    const unloadedRepos = allRepoNames.filter((repo) => !loadedRepos.has(repo));
+    if (unloadedRepos.length === 0) return;
+
+    setIsLoadingMore(true);
+
+    try {
+      // Load next 10 repos
+      const reposToLoad = unloadedRepos.slice(0, 10);
+
+      const newResults = await Promise.all(
+        reposToLoad.map(async (repo) => {
+          try {
             const res = await fetch(`/api/githubOverview?repo=${repo}`);
             if (!res.ok) return null;
             const raw = await res.json();
             const stars = raw.stargazers_count || 0;
 
             return {
-              name: raw.name,
+              name: raw.name || repo.split("/")[1],
+              description: raw.description,
               language: raw.language,
               topics: raw.topics,
               stargazers_count: stars,
               forks_count: raw.forks_count,
               imgUrl: raw.owner?.avatar_url,
-              repoLink: repo, // Store the repo link here
+              repoLink: repo,
               popularity:
                 stars >= 50000
                   ? "legendary"
@@ -205,26 +398,34 @@ export default function Page() {
                   ? "popular"
                   : "rising",
             } as Repo;
-          })
-        );
+          } catch (error) {
+            console.error(`Error fetching ${repo}:`, error);
+            return null;
+          }
+        })
+      );
 
-        const clean = fetched.filter(Boolean) as Repo[];
-        setResults(clean);
-        setFiltered(clean);
-      } catch (err) {
-        console.error("Fetch error", err);
-      } finally {
-        setIsLoading(false);
+      const cleanResults = newResults.filter(Boolean) as Repo[];
+      if (cleanResults.length > 0) {
+        setResults((prev) => [...prev, ...cleanResults]);
+        setLoadedRepos((prev) => {
+          const newSet = new Set(prev);
+          reposToLoad.forEach((repo) => newSet.add(repo));
+          return newSet;
+        });
       }
-    };
-
-    fetchGitHubData();
-  }, []);
+    } catch (error) {
+      console.error("Error loading more repos:", error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   const debouncedFilter = useDebouncedCallback((q: string) => {
     const filteredRepos = results.filter((r) => {
       const matchesQuery =
         r.name?.toLowerCase().includes(q) ||
+        r.description?.toLowerCase().includes(q) ||
         r.language?.toLowerCase().includes(q) ||
         r.topics?.some((t) => t.toLowerCase().includes(q)) ||
         formatNumber(r.stargazers_count ?? 0)
@@ -243,12 +444,38 @@ export default function Page() {
       return matchesQuery && matchesLanguage && matchesPopularity;
     });
 
-    setFiltered(filteredRepos);
+    // If search query is long enough and we have few results, try loading more repos
+    if (q.length >= 3 && filteredRepos.length < 5 && !isLoadingMore) {
+      loadMoreRepos(q);
+    }
+
+    // Apply sorting to filtered results
+    const sortedRepos = sortData(filteredRepos, sortColumn, sortDirection);
+    setFiltered(sortedRepos);
   }, 500);
 
   useEffect(() => {
     debouncedFilter(query.toLowerCase().trim());
   }, [language, popularity, debouncedFilter]);
+
+  useEffect(() => {
+    // Re-sort when sort parameters change
+    const sortedRepos = sortData(filtered, sortColumn, sortDirection);
+    setFiltered(sortedRepos);
+    setCurrentPage(1); // Reset to first page when sorting changes
+  }, [sortColumn, sortDirection]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentData = filtered.slice(startIndex, endIndex);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
 
   return (
     <div className="relative w-full min-h-full p-8 z-10">
@@ -262,7 +489,7 @@ export default function Page() {
             </div>
             <div className="relative w-full max-w-[22rem]">
               <svg
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 font-medium text-neutral-500 pointer-events-none"
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 font-medium text-slate-500 pointer-events-none"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth={1.5}
@@ -285,7 +512,7 @@ export default function Page() {
                 }}
                 placeholder="Curated open source projects from Y Combinator"
                 aria-label="Search repositories"
-                className="pl-8 pr-2 py-1 w-full text-sm text-neutral-500 tracking-tight border-[2px] bg-transparent focus:outline-none focus:ring-1 focus:ring-yellow-300 transition"
+                className="pl-8 pr-2 py-1 w-full text-sm text-slate-500 tracking-tight border-[2px] bg-transparent focus:outline-none focus:ring-1 focus:ring-purple-300 transition"
                 style={{
                   borderImage:
                     "conic-gradient(#d4d4d4 0deg, #171717 90deg, #d4d4d4 180deg, #171717 270deg, #d4d4d4 360deg) 1",
@@ -325,7 +552,7 @@ export default function Page() {
           aria-busy="true"
         >
           <div className="w-10 h-10 border-4 border-transparent border-t-yellow-300 rounded-full animate-spin" />
-          <h1 className="text-base sm:text-lg font-medium text-neutral-300 tracking-tight">
+          <h1 className="text-base sm:text-lg font-medium text-slate-300 tracking-tight">
             Banging Hard
           </h1>
         </main>
@@ -333,26 +560,53 @@ export default function Page() {
         <>
           {/* Desktop Table */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="min-w-full table-auto border-collapse bg-black/40 backdrop-blur-sm border border-neutral-800/50 overflow-hidden">
+            <table className="min-w-full table-auto border-collapse bg-slate-900/40 backdrop-blur-sm border border-purple-800/50 overflow-hidden">
               <thead>
-                <tr className="border-b border-neutral-800/50">
+                <tr className="border-b border-purple-800/50">
                   {columns.map(({ key, label }) => (
                     <th
                       key={key}
                       className={`${
                         key === "topics" ? "text-center" : "text-left"
-                      } py-4 px-6 text-sm font-medium text-neutral-400 bg-neutral-900/30`}
+                      } py-4 px-6 text-sm font-medium text-slate-400 bg-purple-900/30 cursor-pointer hover:bg-purple-800/40 transition-colors select-none`}
+                      onClick={() => handleSort(key)}
                     >
-                      {label}
+                      <div className="flex items-center gap-2">
+                        <span>{label}</span>
+                        {sortColumn === key && (
+                          <div className="flex flex-col">
+                            <ChevronUp
+                              className={`w-3 h-3 ${
+                                sortDirection === "asc"
+                                  ? "text-purple-300"
+                                  : "text-slate-500"
+                              }`}
+                            />
+                            <ChevronDown
+                              className={`w-3 h-3 -mt-1 ${
+                                sortDirection === "desc"
+                                  ? "text-purple-300"
+                                  : "text-slate-500"
+                              }`}
+                            />
+                          </div>
+                        )}
+                        {sortColumn !== key && (
+                          <div className="flex flex-col">
+                            <ChevronUp className="w-3 h-3 text-slate-600" />
+                            <ChevronDown className="w-3 h-3 -mt-1 text-slate-600" />
+                          </div>
+                        )}
+                      </div>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((record, idx) => (
+                {currentData.map((record, idx) => (
                   <tr
                     key={idx}
-                    className="border-b border-neutral-800/30 group hover:bg-neutral-900/20 transition"
+                    className="border-b border-purple-800/30 group hover:bg-purple-900/20 transition"
                   >
                     {columns.map(({ key }) => (
                       <td key={key} className="py-4 px-6 text-sm">
@@ -367,18 +621,19 @@ export default function Page() {
 
           {/* Mobile Cards */}
           <div className="md:hidden space-y-4">
-            {filtered.map((record, idx) => (
+            {currentData.map((record, idx) => (
               <div
                 key={idx}
-                className="border border-neutral-800/50 p-4 bg-black/40 backdrop-blur-sm space-y-5 hover:border-neutral-700 transition"
+                className="border border-purple-800/50 p-4 bg-slate-900/40 backdrop-blur-sm space-y-5 hover:border-purple-700 transition"
               >
                 <div className="flex flex-col gap-2 text-sm text-white font-medium">
                   {renderCell(record, "name")}
+                  {renderCell(record, "description")}
                   {renderCell(record, "language")}
                   {renderCell(record, "topics")}
                   {renderCell(record, "popularity")}
                 </div>
-                <div className="border-t border-neutral-800/50" />
+                <div className="border-t border-purple-800/50" />
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   {columns
                     .filter(({ key }) =>
@@ -386,7 +641,7 @@ export default function Page() {
                     )
                     .map(({ key, label }) => (
                       <div key={key} className="flex flex-col gap-0.5">
-                        <span className="text-neutral-400 font-medium">
+                        <span className="text-slate-400 font-medium">
                           {label}
                         </span>
                         <div className="text-white font-semibold">
@@ -398,10 +653,81 @@ export default function Page() {
               </div>
             ))}
           </div>
+
+          {/* Load More Button */}
+          {!isLoadingMore && allRepoNames.length > loadedRepos.size && (
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={() => loadMoreRepos()}
+                className="px-6 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-600/30 rounded-lg transition-colors"
+              >
+                Load More Repositories ({allRepoNames.length - loadedRepos.size}{" "}
+                remaining)
+              </button>
+            </div>
+          )}
+
+          {/* Loading More Indicator */}
+          {isLoadingMore && (
+            <div className="flex items-center justify-center gap-2 mt-4 text-slate-400">
+              <div className="w-4 h-4 border-2 border-transparent border-t-purple-300 rounded-full animate-spin" />
+              <span className="text-sm">Loading more repositories...</span>
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 mt-8">
+              <button
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+                First
+              </button>
+
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronDown className="w-4 h-4 rotate-90" />
+                Previous
+              </button>
+
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 text-sm">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <span className="text-slate-500 text-xs">
+                  ({filteredData.length} total repos)
+                </span>
+              </div>
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+                <ChevronDown className="w-4 h-4 -rotate-90" />
+              </button>
+
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Last
+                <ChevronsRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </>
       ) : (
         <div className="text-center py-16">
-          <div className="text-neutral-400 font-medium text-base">
+          <div className="text-slate-400 font-medium text-base">
             No repositories found.
           </div>
         </div>
