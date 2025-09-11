@@ -54,7 +54,7 @@ export default function GithubButton() {
 
   return (
     <Link
-      href="https://github.com/faizshaikh17/repovibe"
+      href=""
       target="_blank"
       rel="noopener noreferrer"
       className="group relative flex items-center justify-between gap-2 w-fit max-w-full sm:max-w-[16rem] whitespace-nowrap border border-white/10 px-3 py-2 text-xs sm:text-sm text-white/90 font-mono transition-all duration-700 ease-out hover:shadow-[0_0_20px_rgba(255,255,255,0.08)] overflow-hidden"
