@@ -127,7 +127,7 @@ export default function Hero() {
                 </h1>
 
                 <div
-                  className="mt-2 sm:mt-3 mx-auto lg:mx-0 px-2 py-1 w-fit text-xs sm:text-sm font-medium text-neutral-500 tracking-tight border-[2px] transition-all duration-300"
+                  className="mt-2 sm:mt-3 mx-auto lg:mx-0 px-2 py-1 w-fit text-xs sm:text-sm font-medium text-purple-400 tracking-tight border-[2px] transition-all duration-300"
                   style={{
                     borderImage:
                       "conic-gradient(#d4d4d4 0deg, #171717 90deg, #d4d4d4 180deg, #171717 270deg, #d4d4d4 360deg) 1",
@@ -139,7 +139,7 @@ export default function Hero() {
                 </div>
               </div>
 
-              <div className="text-neutral-400 font-medium leading-5 transition-all duration-300 text-sm sm:text-base">
+              <div className="text-slate-400 font-medium leading-5 transition-all duration-300 text-sm sm:text-base">
                 <p>
                   Revolutionized how developers discover GitHub repositories,{" "}
                   <br className="hidden sm:block" />

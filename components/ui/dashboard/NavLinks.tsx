@@ -84,7 +84,7 @@ export default function NavLinks({
       {navLinks.map((group) => (
         <div key={group.title} className="space-y-2">
           {!collapsed && (
-            <div className="px-2 py-1 text-[10px] font-semibold text-neutral-500 tracking-wider uppercase">
+            <div className="px-2 py-1 text-[10px] font-semibold text-purple-400 tracking-wider uppercase">
               {group.title}
             </div>
           )}
@@ -104,7 +104,7 @@ export default function NavLinks({
                         damping: 20,
                         mass: 0.8,
                       }}
-                      className="absolute inset-0 z-0 rounded w-full border border-neutral-700/40 bg-black/60 backdrop-blur-sm shadow-[0_0_0.5rem_#00000040]"
+                      className="absolute inset-0 z-0 rounded w-full border border-purple-700/40 bg-slate-900/60 backdrop-blur-sm shadow-[0_0_0.5rem_#6b21a840]"
                       style={{
                         borderImage:
                           "conic-gradient(#404040 0deg, #262626 90deg, #404040 180deg, #262626 270deg, #404040 360deg) 1",
@@ -117,8 +117,8 @@ export default function NavLinks({
                     aria-current={isActive ? "page" : undefined}
                     className={clsx(
                       "relative z-10 flex items-center gap-2 px-3 py-2 text-xs sm:text-sm font-medium transition duration-300 overflow-hidden",
-                      "hover:bg-neutral-900/50 hover:text-white",
-                      isActive ? "text-white" : "text-neutral-400",
+                      "hover:bg-purple-900/50 hover:text-white",
+                      isActive ? "text-white" : "text-slate-400",
                       collapsed ? "justify-center" : "justify-between w-full"
                     )}
                   >
@@ -139,7 +139,7 @@ export default function NavLinks({
                       {!collapsed && <span>{item.name}</span>}
                     </div>
                     {!collapsed && isActive && chevron && (
-                      <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-300 transition-transform duration-300 group-hover:translate-x-1" />
+                      <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400 transition-transform duration-300 group-hover:translate-x-1" />
                     )}
                   </Link>
                 </div>

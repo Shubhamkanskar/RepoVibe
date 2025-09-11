@@ -3,7 +3,7 @@ import { Mail, Github } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="w-full text-xs font-mono text-neutral-400 py-12 px-4 border-t border-white/[0.08] bg-black/90 backdrop-blur-sm relative">
+    <footer className="w-full text-xs font-mono text-slate-400 py-12 px-4 border-t border-purple-800/[0.08] bg-slate-900/90 backdrop-blur-sm relative">
       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
 
       <div className="max-w-6xl mx-auto relative z-10">
@@ -16,7 +16,8 @@ export default function Footer() {
             </div>
 
             <div className="text-white text-sm font-medium tracking-wide">
-              repoVibe
+              <span className="text-white">repo</span>
+              <span className="text-purple-400">Vibe</span>
             </div>
 
             <div className="flex items-center gap-8">

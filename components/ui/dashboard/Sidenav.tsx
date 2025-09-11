@@ -31,10 +31,10 @@ export default function Sidenav() {
   return (
     <>
       <aside
-        className={`flex flex-col justify-center sm:pt-16  flex-shrink-0 transition-all duration-300 ease-in-out border-r border-neutral-800/50 bg-black/40 backdrop-blur-sm absolute sm:relative z-10
-      ${collapsed ? "w-16" : "w-full sm:w-64"}`}
+        className={`flex flex-col justify-center sm:pt-16  flex-shrink-0 transition-all duration-300 ease-in-out border-r border-purple-800/50 bg-slate-900/40 backdrop-blur-sm absolute sm:relative z-10
+       ${collapsed ? "w-16" : "w-full sm:w-64"}`}
       >
-        <div className="absolute top-0 right-0 w-[0.05rem] h-full bg-neutral-900/50" />
+        <div className="absolute top-0 right-0 w-[0.05rem] h-full bg-purple-900/50" />
 
         <button
           onClick={() => setIsOpen((prev) => !prev)}
@@ -109,7 +109,7 @@ export default function Sidenav() {
                   className="inline-flex sm:hidden items-center font-mono text-white text-[1.9rem] sm:text-[2.3rem] font-medium leading-none tracking-tight"
                 >
                   <span className="text-white">repo</span>
-                  <span className="text-neutral-500">Vibe</span>
+                  <span className="text-purple-400">Vibe</span>
                 </Link>
               )}
               <button
