@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Heart, HeartOff } from "lucide-react";
-import { favoritesManager, type FavoriteRepo } from "@/lib/favorites";
+import { favoritesManager } from "@/lib/favorites";
 
 interface FavoriteButtonProps {
   repo: {

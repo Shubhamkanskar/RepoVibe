@@ -6,13 +6,55 @@ import IssuesTable from "@/components/ui/dashboard/IssuesTable";
 import AISuggestions from "@/components/ui/dashboard/AISuggestions";
 import { ArrowLeft, Github, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function IssuesPage() {
   const params = useParams();
   const repoName = params.repo as string;
-  const [selectedIssue, setSelectedIssue] = useState<any>(null);
+  interface Issue {
+    id: number;
+    number: number;
+    title: string;
+    body: string;
+    state: string;
+    created_at: string;
+    updated_at: string;
+    closed_at: string | null;
+    user: {
+      login: string;
+      avatar_url: string;
+    };
+    labels: Array<{
+      name: string;
+      color: string;
+      description: string | null;
+    }>;
+    assignees: Array<{
+      login: string;
+      avatar_url: string;
+    }>;
+    comments: number;
+    html_url: string;
+    repository_url: string;
+    difficulty: "easy" | "medium" | "hard";
+    language: string;
+  }
+
+  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [showAISuggestions, setShowAISuggestions] = useState(false);
-  const [repoInfo, setRepoInfo] = useState<any>(null);
+  interface RepoInfo {
+    name: string;
+    description: string;
+    language: string;
+    stargazers_count: number;
+    forks_count: number;
+    owner: {
+      login: string;
+      avatar_url: string;
+    };
+  }
+
+  const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
   const [fullRepoName, setFullRepoName] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>("");
@@ -40,8 +82,8 @@ export default function IssuesPage() {
             );
             setIsLoading(false);
           }
-        } catch (error) {
-          console.error("Error fetching repo info:", error);
+        } catch (err) {
+          console.error("Error fetching repo info:", err);
           setError("Failed to fetch repository information. Please try again.");
           setIsLoading(false);
         }
@@ -97,7 +139,8 @@ export default function IssuesPage() {
 
           // Find exact match first
           const exactMatch = repos.find(
-            (repo: any) => repo.name.toLowerCase() === repoName.toLowerCase()
+            (repo: { name: string }) =>
+              repo.name.toLowerCase() === repoName.toLowerCase()
           );
 
           if (exactMatch) {
@@ -109,7 +152,7 @@ export default function IssuesPage() {
 
           // If no exact match, try to find a close match
           const closeMatch = repos.find(
-            (repo: any) =>
+            (repo: { name: string; full_name: string }) =>
               repo.name.toLowerCase().includes(repoName.toLowerCase()) ||
               repo.full_name.toLowerCase().includes(repoName.toLowerCase())
           );
@@ -151,7 +194,7 @@ export default function IssuesPage() {
             setIsLoading(false);
             return; // Found a valid repo, exit
           }
-        } catch (error) {
+        } catch {
           // Continue to next pattern
           continue;
         }
@@ -166,9 +209,9 @@ export default function IssuesPage() {
     };
 
     constructRepoName();
-  }, [repoName]);
+  }, [repoName, error]);
 
-  const handleIssueSelect = (issue: any) => {
+  const handleIssueSelect = (issue: Issue) => {
     setSelectedIssue(issue);
     setShowAISuggestions(true);
   };
@@ -236,10 +279,13 @@ export default function IssuesPage() {
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3">
               {repoInfo?.owner?.avatar_url && (
-                <img
+                <Image
                   src={repoInfo.owner.avatar_url}
                   alt={repoInfo.owner.login}
+                  width={48}
+                  height={48}
                   className="w-12 h-12 rounded-full"
+                  unoptimized
                 />
               )}
               <div>

@@ -351,16 +351,20 @@ export default function Page() {
     });
 
     // Apply sorting to filtered results
-    const sortedRepos = sortData(filtered, sortColumn, sortDirection);
+    const sortedRepos = sortData(filtered, sortColumn || "name", sortDirection);
     setFilteredData(sortedRepos);
   }, 500);
 
   useEffect(() => {
     // Re-sort when sort parameters change
-    const sortedRepos = sortData(filteredData, sortColumn, sortDirection);
+    const sortedRepos = sortData(
+      filteredData,
+      sortColumn || "name",
+      sortDirection
+    );
     setFilteredData(sortedRepos);
     setCurrentPage(1); // Reset to first page when sorting changes
-  }, [sortColumn, sortDirection]);
+  }, [sortColumn, sortDirection, filteredData]);
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);

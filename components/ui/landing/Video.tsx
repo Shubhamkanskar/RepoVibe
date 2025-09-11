@@ -1,4 +1,3 @@
-import GithubButton from "@/components/GithubButton";
 export default function Video() {
   return (
     <>

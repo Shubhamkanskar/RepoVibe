@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
       : issues.length;
 
     // Process issues to include additional metadata
-    let processedIssues = issues.map((issue: any) => ({
+    let processedIssues = issues.map((issue: GitHubIssue) => ({
       id: issue.id,
       number: issue.number,
       title: issue.title,
@@ -74,12 +74,12 @@ export async function GET(req: NextRequest) {
         login: issue.user.login,
         avatar_url: issue.user.avatar_url,
       },
-      labels: issue.labels.map((label: any) => ({
+      labels: issue.labels.map((label: GitHubLabel) => ({
         name: label.name,
         color: label.color,
         description: label.description,
       })),
-      assignees: issue.assignees.map((assignee: any) => ({
+      assignees: issue.assignees.map((assignee: GitHubUser) => ({
         login: assignee.login,
         avatar_url: assignee.avatar_url,
       })),
@@ -95,13 +95,13 @@ export async function GET(req: NextRequest) {
     // Apply server-side filtering
     if (difficulty && difficulty !== "all") {
       processedIssues = processedIssues.filter(
-        (issue: any) => issue.difficulty === difficulty
+        (issue: ProcessedIssue) => issue.difficulty === difficulty
       );
     }
 
     if (label) {
-      processedIssues = processedIssues.filter((issue: any) =>
-        issue.labels.some((l: any) =>
+      processedIssues = processedIssues.filter((issue: ProcessedIssue) =>
+        issue.labels.some((l: ProcessedLabel) =>
           l.name.toLowerCase().includes(label.toLowerCase())
         )
       );
@@ -135,9 +135,63 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// Type definitions
+interface GitHubIssue {
+  id: number;
+  number: number;
+  title: string;
+  body: string;
+  state: string;
+  created_at: string;
+  updated_at: string;
+  closed_at: string | null;
+  user: GitHubUser;
+  labels: GitHubLabel[];
+  assignees: GitHubUser[];
+  comments: number;
+  html_url: string;
+  repository_url: string;
+}
+
+interface GitHubUser {
+  login: string;
+  avatar_url: string;
+}
+
+interface GitHubLabel {
+  name: string;
+  color: string;
+  description: string | null;
+}
+
+interface ProcessedIssue {
+  id: number;
+  number: number;
+  title: string;
+  body: string;
+  state: string;
+  created_at: string;
+  updated_at: string;
+  closed_at: string | null;
+  user: GitHubUser;
+  labels: ProcessedLabel[];
+  assignees: GitHubUser[];
+  comments: number;
+  html_url: string;
+  repository_url: string;
+  difficulty: "easy" | "medium" | "hard";
+  language: string;
+}
+
+interface ProcessedLabel {
+  name: string;
+  color: string;
+  description: string | null;
+}
+
 // Helper function to calculate issue difficulty
 function calculateDifficulty(
-  labels: any[],
+  labels: GitHubLabel[],
   comments: number
 ): "easy" | "medium" | "hard" {
   const labelNames = labels.map((label) => label.name.toLowerCase());

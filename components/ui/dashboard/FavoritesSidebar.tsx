@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Heart, X, ExternalLink, Github, Star } from "lucide-react";
+import { Heart, X, Github, Star } from "lucide-react";
 import { favoritesManager, type FavoriteRepo } from "@/lib/favorites";
 
 interface FavoritesSidebarProps {

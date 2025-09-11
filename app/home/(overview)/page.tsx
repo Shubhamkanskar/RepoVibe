@@ -360,7 +360,7 @@ export default function Page() {
   }, []);
 
   // Function to load more repos when needed
-  const loadMoreRepos = async (searchQuery: string = "") => {
+  const loadMoreRepos = async () => {
     if (isLoadingMore || allRepoNames.length === 0) return;
 
     const unloadedRepos = allRepoNames.filter((repo) => !loadedRepos.has(repo));
@@ -446,24 +446,28 @@ export default function Page() {
 
     // If search query is long enough and we have few results, try loading more repos
     if (q.length >= 3 && filteredRepos.length < 5 && !isLoadingMore) {
-      loadMoreRepos(q);
+      loadMoreRepos();
     }
 
     // Apply sorting to filtered results
-    const sortedRepos = sortData(filteredRepos, sortColumn, sortDirection);
+    const sortedRepos = sortData(
+      filteredRepos,
+      sortColumn || "name",
+      sortDirection
+    );
     setFiltered(sortedRepos);
   }, 500);
 
   useEffect(() => {
     debouncedFilter(query.toLowerCase().trim());
-  }, [language, popularity, debouncedFilter]);
+  }, [language, popularity, debouncedFilter, query]);
 
   useEffect(() => {
     // Re-sort when sort parameters change
-    const sortedRepos = sortData(filtered, sortColumn, sortDirection);
+    const sortedRepos = sortData(filtered, sortColumn || "name", sortDirection);
     setFiltered(sortedRepos);
     setCurrentPage(1); // Reset to first page when sorting changes
-  }, [sortColumn, sortDirection]);
+  }, [sortColumn, sortDirection, filtered]);
 
   // Calculate pagination
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -701,7 +705,7 @@ export default function Page() {
                   Page {currentPage} of {totalPages}
                 </span>
                 <span className="text-slate-500 text-xs">
-                  ({filteredData.length} total repos)
+                  ({filtered.length} total repos)
                 </span>
               </div>
 

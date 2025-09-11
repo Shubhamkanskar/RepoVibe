@@ -131,8 +131,15 @@ export async function POST(req: NextRequest) {
   }
 }
 
+interface Issue {
+  title: string;
+  body: string;
+  labels: Array<{ name: string }>;
+  comments: number;
+}
+
 function createAnalysisPrompt(
-  issue: any,
+  issue: Issue,
   repository: string,
   language: string
 ): string {
@@ -143,7 +150,7 @@ Repository: ${repository}
 Language: ${language}
 Issue Title: ${issue.title}
 Issue Body: ${issue.body}
-Labels: ${issue.labels.map((l: any) => l.name).join(", ")}
+Labels: ${issue.labels.map((l) => l.name).join(", ")}
 Comments: ${issue.comments}
 
 Please provide a structured analysis in the following JSON format:
@@ -198,7 +205,40 @@ Focus on practical, actionable advice. If this is a good first issue, provide ex
 `;
 }
 
-function parseAIResponse(response: string): any {
+interface AISuggestions {
+  problemAnalysis: {
+    summary: string;
+    complexity: string;
+    estimatedTime: string;
+    keyChallenges: string[];
+  };
+  solutionApproach: {
+    steps: string[];
+    technologies: string[];
+    filesToModify: string[];
+  };
+  codeExamples: {
+    snippets: Array<{
+      language: string;
+      code: string;
+      description: string;
+    }>;
+  };
+  prGuidelines: {
+    title: string;
+    description: string;
+    checklist: string[];
+  };
+  resources: {
+    documentation: string[];
+    examples: string[];
+    relatedIssues: string[];
+  };
+  contributionTips: string[];
+  rawResponse?: string;
+}
+
+function parseAIResponse(response: string): AISuggestions {
   try {
     // First, try to clean the response by removing comments and extra text
     let cleanedResponse = response.trim();
@@ -216,7 +256,7 @@ function parseAIResponse(response: string): any {
       const jsonString = cleanedResponse.substring(jsonStart, jsonEnd + 1);
 
       // Try to clean up common JSON issues
-      let cleanJson = jsonString
+      const cleanJson = jsonString
         .replace(/\/\/.*$/gm, "") // Remove single-line comments
         .replace(/\/\*[\s\S]*?\*\//g, "") // Remove multi-line comments
         .replace(/,(\s*[}\]])/g, "$1") // Remove trailing commas
@@ -225,7 +265,7 @@ function parseAIResponse(response: string): any {
 
       try {
         return JSON.parse(cleanJson);
-      } catch (parseError) {
+      } catch {
         console.log(
           "First JSON parse attempt failed, trying alternative approach"
         );
@@ -245,7 +285,7 @@ function parseAIResponse(response: string): any {
         const alternativeJson = jsonLines.join("\n");
         try {
           return JSON.parse(alternativeJson);
-        } catch (altError) {
+        } catch {
           console.log("Alternative JSON parse also failed");
         }
       }

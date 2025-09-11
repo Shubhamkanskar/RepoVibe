@@ -12,8 +12,37 @@ import {
   ExternalLink,
 } from "lucide-react";
 
+interface Issue {
+  id: number;
+  number: number;
+  title: string;
+  body: string;
+  state: string;
+  created_at: string;
+  updated_at: string;
+  closed_at: string | null;
+  user: {
+    login: string;
+    avatar_url: string;
+  };
+  labels: Array<{
+    name: string;
+    color: string;
+    description: string | null;
+  }>;
+  assignees: Array<{
+    login: string;
+    avatar_url: string;
+  }>;
+  comments: number;
+  html_url: string;
+  repository_url: string;
+  difficulty: "easy" | "medium" | "hard";
+  language: string;
+}
+
 interface AISuggestionsProps {
-  issue: any;
+  issue: Issue;
   repository: string;
   language: string;
 }

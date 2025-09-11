@@ -1,17 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   ChevronUp,
   ChevronDown,
-  ExternalLink,
   MessageCircle,
-  Tag,
-  User,
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface Issue {
   id: number;
@@ -141,8 +139,8 @@ export default function IssuesTable({
         aValue = new Date(aValue as string).getTime();
         bValue = new Date(bValue as string).getTime();
       } else if (column === "user") {
-        aValue = (aValue as any).login;
-        bValue = (bValue as any).login;
+        aValue = (aValue as { login: string }).login;
+        bValue = (bValue as { login: string }).login;
       } else {
         aValue = String(aValue || "").toLowerCase();
         bValue = String(bValue || "").toLowerCase();
@@ -168,55 +166,62 @@ export default function IssuesTable({
     }
   };
 
-  const fetchIssues = async (page: number = 1) => {
-    setIsLoading(true);
-    try {
-      // Build query parameters for server-side filtering
-      const params = new URLSearchParams({
-        repo: repository,
-        state: state === "all" ? "all" : state,
-        page: page.toString(),
-        per_page: pagination.per_page.toString(),
-      });
+  const fetchIssues = useCallback(
+    async (page: number = 1) => {
+      setIsLoading(true);
+      try {
+        // Build query parameters for server-side filtering
+        const params = new URLSearchParams({
+          repo: repository,
+          state: state === "all" ? "all" : state,
+          page: page.toString(),
+          per_page: pagination.per_page.toString(),
+        });
 
-      // Add server-side filtering parameters
-      if (difficulty !== "all") {
-        params.append("difficulty", difficulty);
+        // Add server-side filtering parameters
+        if (difficulty !== "all") {
+          params.append("difficulty", difficulty);
+        }
+        if (labelFilter) {
+          params.append("label", labelFilter);
+        }
+
+        const res = await fetch(`/api/githubIssues?${params.toString()}`);
+        if (!res.ok) throw new Error("Failed to fetch issues");
+
+        const data = await res.json();
+        const issues = data.issues || [];
+
+        setIssues(issues);
+        setFiltered(issues); // Don't apply sorting here, let useEffect handle it
+
+        // Update pagination info
+        if (data.pagination) {
+          setPagination(data.pagination);
+        }
+      } catch (error) {
+        console.error("Error fetching issues:", error);
+        setIssues([]);
+        setFiltered([]);
+      } finally {
+        setIsLoading(false);
       }
-      if (labelFilter) {
-        params.append("label", labelFilter);
-      }
-
-      const res = await fetch(`/api/githubIssues?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch issues");
-
-      const data = await res.json();
-      const issues = data.issues || [];
-
-      setIssues(issues);
-      setFiltered(issues); // Don't apply sorting here, let useEffect handle it
-
-      // Update pagination info
-      if (data.pagination) {
-        setPagination(data.pagination);
-      }
-    } catch (error) {
-      console.error("Error fetching issues:", error);
-      setIssues([]);
-      setFiltered([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [repository, state, difficulty, labelFilter, pagination.per_page]
+  );
 
   useEffect(() => {
     // Reset to page 1 when filters change
     setPagination((prev) => ({ ...prev, current_page: 1 }));
     fetchIssues(1);
-  }, [repository, state, difficulty, labelFilter]);
+  }, [repository, state, difficulty, labelFilter, fetchIssues]);
 
   useEffect(() => {
-    const sortedIssues = sortData(issues, sortColumn, sortDirection);
+    const sortedIssues = sortData(
+      issues,
+      sortColumn || "number",
+      sortDirection
+    );
     setFiltered(sortedIssues);
   }, [sortColumn, sortDirection, issues]);
 
@@ -227,10 +232,9 @@ export default function IssuesTable({
   };
 
   const renderCell = (issue: Issue, key: ColumnKey) => {
-    const value = issue[key];
-
     switch (key) {
       case "number":
+        const numberValue = issue[key] as number;
         return (
           <Link
             href={issue.html_url}
@@ -238,11 +242,12 @@ export default function IssuesTable({
             rel="noopener noreferrer"
             className="text-purple-400 hover:text-purple-300 font-mono text-sm"
           >
-            #{value}
+            #{numberValue}
           </Link>
         );
 
       case "title":
+        const titleValue = issue[key] as string;
         return (
           <div className="max-w-md">
             <Link
@@ -251,26 +256,33 @@ export default function IssuesTable({
               rel="noopener noreferrer"
               className="text-white hover:text-purple-300 font-medium text-sm line-clamp-2"
             >
-              {value}
+              {titleValue}
             </Link>
           </div>
         );
 
       case "state":
-        const stateColor = STATE_COLORS[value as keyof typeof STATE_COLORS];
+        const stateValue = issue[key] as string;
+        const stateColor =
+          STATE_COLORS[stateValue as keyof typeof STATE_COLORS];
         return (
           <span
             className={`capitalize font-semibold text-xs px-2 py-1 rounded-md border ${stateColor}`}
           >
-            {value}
+            {stateValue}
           </span>
         );
 
       case "labels":
-        if (Array.isArray(value) && value.length > 0) {
+        const labelsValue = issue[key] as Array<{
+          name: string;
+          color: string;
+          description: string | null;
+        }>;
+        if (Array.isArray(labelsValue) && labelsValue.length > 0) {
           return (
             <div className="flex flex-wrap gap-1 max-w-xs">
-              {value.slice(0, 5).map((label, i) => (
+              {labelsValue.slice(0, 5).map((label, i) => (
                 <span
                   key={`${label.name}-${i}`}
                   className="text-xs px-2 py-1 rounded-sm border font-medium truncate"
@@ -284,9 +296,9 @@ export default function IssuesTable({
                   {label.name}
                 </span>
               ))}
-              {value.length > 5 && (
+              {labelsValue.length > 5 && (
                 <span className="text-xs text-slate-400 px-1">
-                  +{value.length - 5}
+                  +{labelsValue.length - 5}
                 </span>
               )}
             </div>
@@ -295,46 +307,55 @@ export default function IssuesTable({
         return <span className="text-slate-400 text-sm">-</span>;
 
       case "difficulty":
+        const difficultyValue = issue[key] as string;
         const difficultyColor =
-          DIFFICULTY_COLORS[value as keyof typeof DIFFICULTY_COLORS];
+          DIFFICULTY_COLORS[difficultyValue as keyof typeof DIFFICULTY_COLORS];
         return (
           <span
             className={`capitalize font-semibold text-xs px-2 py-1 rounded-md border ${difficultyColor}`}
           >
-            {value}
+            {difficultyValue}
           </span>
         );
 
       case "comments":
+        const commentsValue = issue[key] as number;
         return (
           <div className="flex items-center gap-1 text-slate-400">
             <MessageCircle className="w-3 h-3" />
-            <span className="text-sm">{value}</span>
+            <span className="text-sm">{commentsValue}</span>
           </div>
         );
 
       case "created_at":
+        const createdValue = issue[key] as string;
         return (
           <span className="text-slate-400 text-sm">
-            {new Date(value as string).toLocaleDateString()}
+            {new Date(createdValue).toLocaleDateString()}
           </span>
         );
 
       case "user":
-        const user = value as any;
+        const userValue = issue[key] as { login: string; avatar_url: string };
         return (
           <div className="flex items-center gap-2">
-            <img
-              src={user.avatar_url}
-              alt={user.login}
+            <Image
+              src={userValue.avatar_url}
+              alt={userValue.login}
+              width={20}
+              height={20}
               className="w-5 h-5 rounded-full"
+              unoptimized
             />
-            <span className="text-slate-400 text-sm">{user.login}</span>
+            <span className="text-slate-400 text-sm">{userValue.login}</span>
           </div>
         );
 
       default:
-        return <span className="text-slate-400 text-sm">{value ?? "-"}</span>;
+        const defaultValue = issue[key] as string | number;
+        return (
+          <span className="text-slate-400 text-sm">{defaultValue ?? "-"}</span>
+        );
     }
   };
 
@@ -353,7 +374,9 @@ export default function IssuesTable({
       <div className="flex flex-wrap gap-4 mb-6">
         <select
           value={state}
-          onChange={(e) => setState(e.target.value as any)}
+          onChange={(e) =>
+            setState(e.target.value as "open" | "closed" | "all")
+          }
           className="bg-slate-900 text-white border border-purple-800/50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-purple-300/40 transition"
         >
           <option value="open">Open Issues</option>
@@ -363,7 +386,9 @@ export default function IssuesTable({
 
         <select
           value={difficulty}
-          onChange={(e) => setDifficulty(e.target.value as any)}
+          onChange={(e) =>
+            setDifficulty(e.target.value as "all" | "easy" | "medium" | "hard")
+          }
           className="bg-slate-900 text-white border border-purple-800/50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-purple-300/40 transition"
         >
           <option value="all">All Difficulties</option>

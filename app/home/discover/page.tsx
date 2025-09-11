@@ -19,7 +19,7 @@ interface Repo {
   topics: string[];
   stargazers_count: number;
   forks_count: number;
-  owner: { avatar_url: string };
+  owner: { login: string; avatar_url: string };
   html_url: string;
   popularity?: "legendary" | "famous" | "popular" | "rising";
 }
@@ -366,7 +366,11 @@ export default function TrendingRepos() {
     });
 
     // Apply sorting to filtered results
-    const sortedRepos = sortData(filteredRepos, sortColumn, sortDirection);
+    const sortedRepos = sortData(
+      filteredRepos,
+      sortColumn || "name",
+      sortDirection
+    );
     setFiltered(sortedRepos);
   }, 300);
 
@@ -376,9 +380,9 @@ export default function TrendingRepos() {
 
   useEffect(() => {
     // Re-sort when sort parameters change
-    const sortedRepos = sortData(filtered, sortColumn, sortDirection);
+    const sortedRepos = sortData(filtered, sortColumn || "name", sortDirection);
     setFiltered(sortedRepos);
-  }, [sortColumn, sortDirection]);
+  }, [sortColumn, sortDirection, filtered]);
 
   return (
     <div className="relative w-full min-h-full p-8 z-10">
