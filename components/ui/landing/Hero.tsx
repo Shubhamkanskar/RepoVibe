@@ -93,25 +93,55 @@ export default function Hero() {
             />
           </div> */}
 
-          <div className="absolute top-4 sm:top-6 md:top-8 left-0 w-full px-4 sm:px-8 md:px-16 lg:px-32 xl:px-44 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 z-10">
-            <Link
-              href="/"
-              className="inline-flex font-instrument items-center font-mono text-white text-[1.9rem] sm:text-[2.5rem] font-medium leading-none tracking-tight"
-            >
-              <span className="text-white">repo</span>
-              <span className="text-purple-400">Vibe</span>
-            </Link>
+          {/* Enhanced Navbar */}
+          <nav className="absolute top-0 left-0 w-full px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 z-20">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex items-center justify-between h-16 sm:h-20 bg-slate-900/20 backdrop-blur-md border-b border-slate-800/30 rounded-b-2xl">
+                {/* Logo */}
+                <Link
+                  href="/"
+                  className="group flex items-center space-x-2 transition-all duration-300 hover:scale-105"
+                >
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-purple-500/20 rounded-lg blur-sm group-hover:bg-purple-400/30 transition-all duration-300"></div>
+                    <div className="relative bg-slate-800/50 backdrop-blur-sm border border-purple-500/20 rounded-lg px-3 py-2">
+                      <span className="font-instrument font-mono text-white text-xl sm:text-2xl font-bold leading-none tracking-tight">
+                        repo<span className="text-purple-400">Vibe</span>
+                      </span>
+                    </div>
+                  </div>
+                </Link>
 
-            <div className="hidden sm:flex flex-row gap-2 sm:gap-4 w-full sm:w-auto items-start sm:items-center">
-              <Button
-                label="Get started"
-                href="/auth"
-                className="z-10 transition duration-300 shadow-lg flex hover:shadow-xl sm:w-auto"
-              />
+                {/* CTA Button */}
+                <div className="flex items-center space-x-4">
+                  <Button
+                    label="Get Started"
+                    href="/auth"
+                    className="relative z-10 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 border-0 text-white font-semibold px-6 py-2.5 rounded-lg"
+                  />
+
+                  {/* Mobile Menu Button */}
+                  <button className="md:hidden p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/50 transition-all duration-300">
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 6h16M4 12h16M4 18h16"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+          </nav>
 
-          <div className="flex flex-col lg:flex-row w-full justify-between items-center gap-14 lg:gap-4 z-10 mt-24 sm:mt-32 md:mt-20 lg:mt-0 px-4 sm:px-0">
+          <div className="flex flex-col lg:flex-row w-full justify-between items-center gap-14 lg:gap-4 z-10 mt-32 sm:mt-36 md:mt-28 lg:mt-8 px-4 sm:px-0">
             <div className="flex flex-col gap-6 w-full items-center lg:items-start text-center lg:text-left">
               <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-medium leading-[100%] animate-fade-in w-fit">
                 <h1 className="bg-gradient-to-r font-medium font-instrument leading-[110%] space-x-1 sm:space-x-2 text-slate-400">
