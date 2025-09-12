@@ -6,8 +6,9 @@ RepoVibe is a free and open-source tool to explore trending and curated GitHub r
 Made for speed. Free for everyone. Open for contributors.
 
 **Created by [Shubham Kanaskar](https://github.com/Shubhamkanskar)**
-
-<img width="1920" height="1020" alt="dashboard" src="https://github.com/user-attachments/assets/bf1b7d5a-f2e8-41f9-8a42-8c6a1a92c63a" />
+<img width="1920" height="1612" alt="screencapture-repovibe-space-home-issues-ollama-2025-09-12-08_30_48" src="https://github.com/user-attachments/assets/bfc8968a-b2a7-4f32-b0bc-2f07534f40d7" />
+<img width="1920" height="1595" alt="screencapture-repovibe-space-home-2025-09-12-08_31_11" src="https://github.com/user-attachments/assets/7e2938b3-94dd-4773-b86a-5086d61da428" />
+<img width="1920" height="2336" alt="screencapture-repovibe-space-home-issues-ollama-2025-09-12-08_30_14" src="https://github.com/user-attachments/assets/0f0431db-28ca-4e7f-9e98-583aa9a09f20" />
 
 ---
 
