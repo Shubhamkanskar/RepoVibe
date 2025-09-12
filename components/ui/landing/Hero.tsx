@@ -118,12 +118,13 @@ export default function Hero() {
                   <span>Discover</span>
                   <span className="text-white">GitHub</span>
                   <span className="text-white">Repos</span>
-                  <span>In</span>
-                  <span className="text-purple-400">Seconds</span>
+                  <span>&</span>
+                  <span className="text-purple-400">Solve</span>
+                  <span className="text-purple-400">Issues</span>
                   <br />
-                  <span>Not</span>
-                  <span>In</span>
-                  <span className="text-purple-400">Minutes</span>
+                  <span>With</span>
+                  <span className="text-purple-400">AI</span>
+                  <span>Power</span>
                 </h1>
 
                 <div
@@ -135,15 +136,15 @@ export default function Hero() {
                   role="banner"
                   aria-label="Project tagline"
                 >
-                  Discover GitHub Repos in Seconds.
+                  AI-Powered GitHub Issue Analysis & Solutions
                 </div>
               </div>
 
               <div className="text-slate-400 font-medium leading-5 transition-all duration-300 text-sm sm:text-base">
                 <p>
-                  Revolutionized how developers discover GitHub repositories,{" "}
-                  <br className="hidden sm:block" />
-                  making it faster and more intuitive.
+                  Discover trending repositories and get AI-powered solutions
+                  for GitHub issues. <br className="hidden sm:block" />
+                  Transform complex problems into actionable development plans.
                 </p>
               </div>
 
@@ -165,6 +166,84 @@ export default function Hero() {
                     Y
                   </span>
                 </button>
+              </div>
+
+              {/* Feature Highlights */}
+              <div className="flex flex-wrap justify-center gap-4 mt-6">
+                <div className="flex items-center gap-2 px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full">
+                  <svg
+                    className="w-4 h-4 text-purple-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                  <span className="text-sm text-purple-300">
+                    AI-Powered Analysis
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full">
+                  <svg
+                    className="w-4 h-4 text-blue-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  <span className="text-sm text-blue-300">Smart Discovery</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
+                  <svg
+                    className="w-4 h-4 text-green-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span className="text-sm text-green-300">
+                    Instant Solutions
+                  </span>
+                </div>
+              </div>
+
+              {/* Stats Section */}
+              <div className="flex flex-wrap justify-center gap-8 mt-8 text-center">
+                <div className="flex flex-col items-center">
+                  <div className="text-2xl font-bold text-white">10K+</div>
+                  <div className="text-sm text-slate-400">
+                    Repositories Analyzed
+                  </div>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="text-2xl font-bold text-white">95%</div>
+                  <div className="text-sm text-slate-400">
+                    Issue Resolution Rate
+                  </div>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="text-2xl font-bold text-white">2.5s</div>
+                  <div className="text-sm text-slate-400">
+                    Average Analysis Time
+                  </div>
+                </div>
               </div>
             </div>
 
