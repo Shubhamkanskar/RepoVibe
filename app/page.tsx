@@ -2,6 +2,7 @@ import Hero from "@/components/ui/landing/Hero";
 import Footer from "@/components/ui/landing/Footer";
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
+import Video from "@/components/ui/landing/Video";
 
 export default async function Home() {
   const session = await getSession();
@@ -13,7 +14,7 @@ export default async function Home() {
   return (
     <>
       <Hero />
-      {/* <Video /> */}
+      <Video />
       <Footer />
     </>
   );
